@@ -1,0 +1,36 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+}
+
+@media (min-width: 768px) {
+  .hero {
+    padding: 3rem;
+  }
+}
+
+.bgLeft,
+.bgRight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bgLeft {
+  background: radial-gradient(circle at 30% 50%, rgba(141, 191, 90, 0.15), transparent 50%);
+}
+
+.bgRight {
+  background: radial-gradient(circle at 70% 50%, rgba(105, 191, 151, 0.15), transparent 50%);
+}
+
+.heroLogo {
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.25));
+  width: clamp(8rem, 12vw, 14rem);
+  height: clamp(8rem, 12vw, 14rem);
+}
+

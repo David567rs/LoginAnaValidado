@@ -1,0 +1,13 @@
+{
+  "name": "inhalex-monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n server,web -c green,cyan \"pnpm --dir server start:dev\" \"pnpm --dir frontend dev\"",
+    "dev:server": "pnpm --dir server start:dev",
+    "dev:web": "pnpm --dir frontend dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
+
