@@ -4,6 +4,7 @@ import { LoginDto } from './dto/login.dto.js'
 import { CreateUserDto } from '../users/dto/create-user.dto.js'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js'
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator'
+import { UsersService } from '../users/users.service.js'
 
 class ForgotDto { @IsEmail() email!: string }
 class ResetDto { @IsNotEmpty() token!: string; @MinLength(8) newPassword!: string }
@@ -12,7 +13,7 @@ class ResendVerifyDto { @IsEmail() email!: string }
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(private readonly auth: AuthService, private readonly users: UsersService) {}
 
   @Post('register')
   register(@Body() dto: CreateUserDto) {
@@ -26,8 +27,12 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  me(@Req() req: any) {
-    return req.user
+  async me(@Req() req: any) {
+    const email = req.user?.email
+    if (!email) return req.user
+    const user = await this.users.findByEmail(String(email))
+    if (!user) return req.user
+    return user
   }
 
   @Post('forgot-password')

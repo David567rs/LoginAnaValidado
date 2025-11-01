@@ -20,9 +20,10 @@ export class EmailService {
     }
   }
 
-  async sendPasswordReset(to: string, link: string) {
+  async sendPasswordReset(to: string, link: string, token?: string) {
     if (!this.enabled) {
       console.log(`[EmailService:dev] Reset link for ${to}: ${link}`)
+      if (token) console.log(`[EmailService:dev] Reset token for ${to}: ${token}`)
       return
     }
     try {
@@ -34,6 +35,8 @@ export class EmailService {
           <p>Solicitaste restablecer tu contraseña.</p>
           <p>Puedes hacerlo usando el siguiente enlace (válido por 1 hora):</p>
           <p><a href="${link}">Restablecer contraseña</a></p>
+          ${token ? `<p>O pega este token en la página de restablecimiento:</p>
+          <pre style="background:#f5f5f5;padding:12px;border-radius:6px;">${token}</pre>` : ''}
           <p>Si no fuiste tú, ignora este correo.</p>
         `,
       })

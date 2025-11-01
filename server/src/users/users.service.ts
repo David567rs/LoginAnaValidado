@@ -21,7 +21,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string) {
-    const user = await this.userModel.findOne({ email }).lean()
+    const user = await this.userModel.findOne({ email: email.toLowerCase().trim() }).lean()
     return user
   }
 
@@ -36,4 +36,3 @@ export class UsersService {
     return obj
   }
 }
-
