@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service.js'
 import { LoginDto } from './dto/login.dto.js'
 import { CreateUserDto } from '../users/dto/create-user.dto.js'
@@ -10,6 +10,7 @@ class ForgotDto { @IsEmail() email!: string }
 class ResetDto { @IsNotEmpty() token!: string; @MinLength(8) newPassword!: string }
 class VerifyEmailDto { @IsEmail() email!: string; @IsNotEmpty() code!: string }
 class ResendVerifyDto { @IsEmail() email!: string }
+class EmailAvailableQuery { @IsEmail() email!: string }
 
 @Controller('auth')
 export class AuthController {
@@ -53,5 +54,11 @@ export class AuthController {
   @Post('resend-verification')
   resend(@Body() dto: ResendVerifyDto) {
     return this.auth.resendVerification(dto.email)
+  }
+
+  @Get('email-available')
+  async emailAvailable(@Query() query: EmailAvailableQuery) {
+    const exists = await this.users.findByEmail(query.email.toLowerCase().trim())
+    return { available: !exists }
   }
 }

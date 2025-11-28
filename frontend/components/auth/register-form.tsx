@@ -2,7 +2,6 @@
 
 import type React from "react"
 import Link from "next/link"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,21 +24,70 @@ export function RegisterForm() {
     confirmPassword: "",
   })
   const [isLoading, setIsLoading] = useState(false)
-  const { register: registerUser } = useAuth()
   const router = useRouter()
   const [passwordMatch, setPasswordMatch] = useState(true)
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "unavailable" | "error">("idle")
+  const [passwordStrength, setPasswordStrength] = useState<"empty" | "weak" | "medium" | "strong">("empty")
+  const [passwordHints, setPasswordHints] = useState<string[]>([])
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const nameRegex = /[^A-Za-z\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1\s]/g
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
+
+  const evaluatePassword = (pwd: string): "empty" | "weak" | "medium" | "strong" => {
+    if (!pwd) return "empty"
+    const lengthScore = pwd.length >= 8
+    const hasUpper = /[A-Z]/.test(pwd)
+    const hasNumber = /\d/.test(pwd)
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd)
+    const score = [lengthScore, hasUpper, hasNumber, hasSpecial].filter(Boolean).length
+    if (score >= 4 && pwd.length >= 10) return "strong"
+    if (score >= 3) return "medium"
+    return "weak"
+  }
+
+  const passwordFeedback = (pwd: string) => {
+    const hints: string[] = []
+    if (pwd.length < 8) hints.push("minimo 8 caracteres")
+    if (!/[A-Z]/.test(pwd)) hints.push("una mayuscula")
+    if (!/\d/.test(pwd)) hints.push("un numero")
+    if (!/[^A-Za-z0-9]/.test(pwd)) hints.push("un caracter especial")
+    return hints
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const sanitized =
+      name === "name"
+        ? value.replace(nameRegex, "")
+        : name === "phone"
+          ? value.replace(/\D/g, "").slice(0, 10)
+          : value
+    setFormData((prev) => ({ ...prev, [name]: sanitized }))
+    if (name === "email") setEmailStatus("idle")
+    if (name === "password") {
+      setPasswordStrength(evaluatePassword(sanitized))
+      setPasswordHints(passwordFeedback(sanitized))
+    }
 
-    // Comparar contraseñas en tiempo real
     if (name === "confirmPassword" || name === "password") {
       if (name === "confirmPassword") {
-        setPasswordMatch(value === formData.password || value === "")
+        setPasswordMatch(sanitized === formData.password || sanitized === "")
       } else {
-        setPasswordMatch(formData.confirmPassword === value || formData.confirmPassword === "")
+        setPasswordMatch(formData.confirmPassword === sanitized || formData.confirmPassword === "")
       }
+    }
+  }
+
+  const checkEmailAvailability = async () => {
+    const normalizedEmail = formData.email.trim().toLowerCase()
+    if (!emailRegex.test(normalizedEmail)) return
+    setEmailStatus("checking")
+    try {
+      const res = await apiFetch<{ available: boolean }>(`/auth/email-available?email=${encodeURIComponent(normalizedEmail)}`)
+      setEmailStatus(res.available ? "available" : "unavailable")
+    } catch {
+      setEmailStatus("error")
     }
   }
 
@@ -50,15 +98,18 @@ export function RegisterForm() {
       setPasswordMatch(false)
       return
     }
+    if (!passwordRegex.test(formData.password)) {
+      toast.error("La contrasena debe cumplir los requisitos")
+      return
+    }
 
     setIsLoading(true)
     try {
-      // New flow: backend requires email verification before login
       await apiFetch('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password }),
       })
-      toast.success('Registro exitoso. Revisa tu correo para el código')
+      toast.success('Registro exitoso. Revisa tu correo para el codigo')
       router.push(`/auth/verify-email/sent?email=${encodeURIComponent(formData.email)}`)
     } catch (err: any) {
       let msg = err?.message || String(err)
@@ -69,14 +120,13 @@ export function RegisterForm() {
       console.error('Register error', msg)
 
       if (msg.includes('Email already in use')) {
-        // Si el correo ya existe, reenviamos verificación y guiamos al usuario
         try {
           await apiFetch('/auth/resend-verification', {
             method: 'POST',
             body: JSON.stringify({ email: formData.email }),
           })
         } catch {}
-        toast.info('El correo ya está en uso. Si no has verificado, te reenviamos el código.')
+        toast.info('El correo ya esta en uso. Si no has verificado, te reenviamos el codigo.')
         router.push(`/auth/verify-email/sent?email=${encodeURIComponent(formData.email)}`)
         return
       }
@@ -87,6 +137,14 @@ export function RegisterForm() {
     }
   }
 
+  const emailHint = (() => {
+    if (emailStatus === "checking") return "Comprobando disponibilidad..."
+    if (emailStatus === "available") return "Correo disponible"
+    if (emailStatus === "unavailable") return "Este correo ya esta en uso"
+    if (emailStatus === "error") return "No se pudo verificar el correo"
+    return ""
+  })()
+
   return (
     <div className="space-y-6">
       <Card className="border-border/50 shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl">
@@ -96,7 +154,6 @@ export function RegisterForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4" aria-busy={isLoading} aria-live="polite">
-            {/* Nombre completo */}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium">
                 Nombre completo
@@ -111,16 +168,17 @@ export function RegisterForm() {
                   value={formData.name}
                   onChange={handleChange}
                   autoComplete="name"
+                  pattern="[A-Za-z\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1\s]+"
+                  title="Solo letras y espacios"
                   className="pl-10 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   required
                 />
               </div>
             </div>
 
-            {/* Correo */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
-                Correo electrónico
+                Correo electronico
               </Label>
               <div className="relative group">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -131,38 +189,52 @@ export function RegisterForm() {
                   placeholder="tu@email.com"
                   value={formData.email}
                   onChange={handleChange}
+                  onBlur={checkEmailAvailability}
                   autoComplete="email"
                   className="pl-10 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   required
                 />
+                {emailStatus === "available" && (
+                  <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-500" />
+                )}
               </div>
+              {emailHint && (
+                <p className={`text-xs ${emailStatus === "unavailable" || emailStatus === "error" ? "text-red-500" : "text-muted-foreground"}`}>
+                  {emailHint}
+                </p>
+              )}
             </div>
 
-            {/* Teléfono */}
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-sm font-medium">
-                Número telefónico
+                Numero telefonico
               </Label>
               <div className="relative group">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                <span className="absolute left-10 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none px-2 py-1 rounded-md bg-muted/60 border border-border/70">
+                  MX +52
+                </span>
                 <Input
                   id="phone"
                   name="phone"
                   type="tel"
-                  placeholder="+52 000 000 0000"
+                  placeholder="10 digitos"
                   value={formData.phone}
                   onChange={handleChange}
                   autoComplete="tel"
-                  className="pl-10 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                  maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]{10}"
+                  title="Ingresa 10 digitos"
+                  className="pl-28 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   required
                 />
               </div>
             </div>
 
-            {/* Contraseña */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
-                Contraseña
+                Contrasena
               </Label>
               <div className="relative group">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -170,10 +242,12 @@ export function RegisterForm() {
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={formData.password}
                   onChange={handleChange}
                   autoComplete="new-password"
+                  pattern="(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}"
+                  title="Minimo 8 caracteres, 1 mayuscula, 1 numero y 1 caracter especial"
                   className="pl-10 pr-10 h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   required
                 />
@@ -187,10 +261,9 @@ export function RegisterForm() {
               </div>
             </div>
 
-            {/* Confirmar contraseña */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirmar contraseña
+                Confirmar contrasena
               </Label>
               <div className="relative group">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
@@ -198,7 +271,7 @@ export function RegisterForm() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   autoComplete="new-password"
@@ -221,15 +294,37 @@ export function RegisterForm() {
                 )}
               </div>
               {!passwordMatch && formData.confirmPassword && (
-                <p id="confirm-help" className="text-xs text-red-500 mt-1">Las contraseñas no coinciden</p>
+                <p id="confirm-help" className="text-xs text-red-500 mt-1">Las contrasenas no coinciden</p>
               )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-200 ${
+                    passwordStrength === "strong"
+                      ? "bg-green-500 w-full"
+                      : passwordStrength === "medium"
+                        ? "bg-yellow-400 w-2/3"
+                        : passwordStrength === "weak"
+                          ? "bg-red-500 w-1/3"
+                          : "bg-transparent w-0"
+                  }`}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {passwordStrength === "strong" && "Muy segura"}
+                {passwordStrength === "medium" && "Segura"}
+                {passwordStrength === "weak" && passwordHints.length > 0 && `Falta: ${passwordHints.join(", ")}`}
+                {passwordStrength === "empty" && "Minimo 8 caracteres, 1 mayuscula, 1 numero y 1 especial"}
+              </p>
             </div>
 
             <Button
               type="submit"
               className="w-full h-11 text-base font-semibold bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group mt-6"
-              disabled={isLoading || !passwordMatch}
-              aria-disabled={isLoading || !passwordMatch}
+              disabled={isLoading || !passwordMatch || emailStatus === "unavailable" || !passwordRegex.test(formData.password)}
+              aria-disabled={isLoading || !passwordMatch || emailStatus === "unavailable" || !passwordRegex.test(formData.password)}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -246,12 +341,12 @@ export function RegisterForm() {
           </form>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
-            <div className="relative w-full">
+          <div className="relative w-full">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">O regístrate con</span>
+              <span className="bg-card px-2 text-muted-foreground">O registrate con</span>
             </div>
           </div>
 
@@ -284,9 +379,9 @@ export function RegisterForm() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            ¿Ya tienes una cuenta?{" "}
+            Ya tienes una cuenta?{" "}
             <Link href="/" className="text-primary hover:text-primary/80 font-medium transition-colors">
-              Inicia sesión aquí
+              Inicia sesion aqui
             </Link>
           </p>
         </CardFooter>
@@ -295,11 +390,11 @@ export function RegisterForm() {
       <p className="text-center text-xs text-muted-foreground">
         Al registrarte, aceptas nuestros{" "}
         <a href="#" className="text-primary hover:underline">
-          Términos de Servicio
+          Terminos de Servicio
         </a>{" "}
         y{" "}
         <a href="#" className="text-primary hover:underline">
-          Política de Privacidad
+          Politica de Privacidad
         </a>
       </p>
     </div>

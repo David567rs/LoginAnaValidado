@@ -20,20 +20,30 @@ export function ForgotPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const normalizedEmail = email.trim().toLowerCase()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(normalizedEmail)) {
+      toast.error("Ingresa un correo valido")
+      return
+    }
     setIsSending(true)
     try {
       const res = await apiFetch<{ ok: boolean; devToken?: string; resetUrl?: string }>("/auth/forgot-password", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: normalizedEmail }),
       })
       setSent(true)
-      toast.success("Si el correo existe, se envió un enlace")
+      toast.success("Si el correo existe, se envio un enlace")
       if (res.devToken) {
-        // para desarrollo: redirigimos directo
         router.push(`/auth/reset-password?token=${res.devToken}`)
       }
     } catch (err: any) {
-      toast.error("No se pudo enviar el enlace: " + (err?.message || "Error desconocido"))
+      let msg = err?.message || "Error desconocido"
+      try {
+        const parsed = JSON.parse(msg)
+        msg = parsed?.message || msg
+      } catch {}
+      toast.error(msg || "No se pudo enviar el enlace (correo no enviado o no existe)")
     } finally {
       setIsSending(false)
     }
@@ -53,7 +63,7 @@ export function ForgotPasswordForm() {
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <CheckCircle2 className="h-10 w-10 text-green-500" />
               <p className="text-sm text-muted-foreground max-w-sm">
-                Si {email} está registrado, recibirás un correo con instrucciones para restablecer tu contraseña.
+                Si {email} esta registrado, recibiras un correo con instrucciones para restablecer tu contraseña.
               </p>
             </div>
           ) : (

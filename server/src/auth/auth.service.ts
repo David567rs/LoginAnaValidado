@@ -44,11 +44,8 @@ export class AuthService {
 
   async requestPasswordReset(email: string) {
     const user = await this.users.findByEmail(email.toLowerCase().trim())
-    if (!user) {
-      // No revelar si existe o no
-      return { ok: true }
-    }
-    // Clean previous tokens for this user
+    if (!user) throw new NotFoundException('El correo no se encuentra registrado')
+    await this.resetModel.deleteMany({ expiresAt: { $lt: new Date() } })
     await this.resetModel.deleteMany({ userId: user._id })
     const token = randomToken(32)
     const tokenHash = sha256(token)
@@ -70,6 +67,8 @@ export class AuthService {
     // Update user password
     const userDoc = await (this.users as any).userModel.findById(doc.userId).lean()
     if (!userDoc) throw new NotFoundException('User not found')
+    const isSame = await bcrypt.compare(newPassword, userDoc.passwordHash)
+    if (isSame) throw new BadRequestException('New password must be different from the current one')
     const user = await this.users.findByEmail(userDoc.email)
     if (!user) throw new NotFoundException('User not found')
     // set new password
@@ -84,6 +83,7 @@ export class AuthService {
   private async issueAndSendVerification(userId: string, email: string) {
     // delete previous codes
     const uid = new Types.ObjectId(userId)
+    await this.verifModel.deleteMany({ expiresAt: { $lt: new Date() } })
     await this.verifModel.deleteMany({ userId: uid })
     const code = Math.floor(100000 + Math.random() * 900000).toString() // 6-digit
     const codeHash = sha256(code)

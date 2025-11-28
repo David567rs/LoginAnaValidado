@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiFetch, setToken } from "@/lib/api"
-import { useAuth } from "@/components/auth/auth-provider"
 import { toast } from "sonner"
 
 export function VerifyEmailForm() {
@@ -17,7 +16,6 @@ export function VerifyEmailForm() {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  // We will consume AuthProvider indirectly via apiFetch + storing token
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,13 +29,20 @@ export function VerifyEmailForm() {
       toast.success("Correo verificado")
       router.push('/dashboard')
     } catch (err: any) {
-      toast.error('No se pudo verificar: ' + (err?.message || 'Error'))
+      let msg = err?.message || 'Error'
+      try {
+        const parsed = JSON.parse(msg)
+        msg = parsed?.message || msg
+      } catch {}
+      const friendly = msg.includes('Invalid or expired code')
+        ? 'Codigo invalido o expirado. Revisa el ultimo codigo o solicita uno nuevo.'
+        : msg
+      toast.error('No se pudo verificar: ' + friendly)
     } finally {
       setLoading(false)
     }
   }
 
-  // Auto-verificación usando enlace mágico (?email=..&code=..)
   const triedRef = useRef(false)
   useEffect(() => {
     const codeQ = params.get('code')
@@ -57,7 +62,15 @@ export function VerifyEmailForm() {
           toast.success("Correo verificado")
           router.push('/dashboard')
         } catch (err: any) {
-          toast.error('No se pudo verificar: ' + (err?.message || 'Error'))
+          let msg = err?.message || 'Error'
+          try {
+            const parsed = JSON.parse(msg)
+            msg = parsed?.message || msg
+          } catch {}
+          const friendly = msg.includes('Invalid or expired code')
+            ? 'Codigo invalido o expirado. Revisa el ultimo codigo o solicita uno nuevo.'
+            : msg
+          toast.error('No se pudo verificar: ' + friendly)
         } finally {
           setLoading(false)
         }
@@ -70,8 +83,7 @@ export function VerifyEmailForm() {
     setLoading(true)
     try {
       await apiFetch('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email: email.trim().toLowerCase() }) })
-      toast.success('Código reenviado')
-      // Reinicia contador a 15:00 y guarda marca de tiempo
+      toast.success('Codigo reenviado')
       const now = Date.now()
       localStorage.setItem(`verif_sent:${email.toLowerCase()}`, String(now))
       setStartTs(now)
@@ -82,7 +94,6 @@ export function VerifyEmailForm() {
     }
   }
 
-  // Nota y contador de caducidad (15 minutos desde el último envío)
   const CODE_TTL_MS = 15 * 60 * 1000
   const [startTs, setStartTs] = useState<number>(() => {
     if (typeof window === 'undefined') return Date.now()
@@ -111,7 +122,7 @@ export function VerifyEmailForm() {
       <CardHeader className="space-y-1">
         <CardTitle className="text-3xl font-bold text-center">Verifica tu correo</CardTitle>
         <CardDescription className="text-center">
-          Hemos enviado un código de 6 dígitos a tu correo. Usa siempre el último código enviado.
+          Hemos enviado un codigo de 6 digitos a tu correo. Usa siempre el ultimo codigo enviado.
           <br />
           Caduca en: {mounted ? (
             <span className="font-medium">{mm}:{ss}</span>
@@ -127,7 +138,7 @@ export function VerifyEmailForm() {
             <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="code">Código</Label>
+            <Label htmlFor="code">Codigo</Label>
             <Input
               id="code"
               value={code}
@@ -144,14 +155,14 @@ export function VerifyEmailForm() {
             disabled={!mounted || loading || isExpired}
             aria-disabled={!mounted || loading || isExpired}
           >
-            {isExpired ? 'Código expirado — Reenviar' : 'Verificar'}
+            {isExpired ? 'Codigo expirado → Reenviar' : 'Verificar'}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button variant="outline" onClick={handleResend} disabled={loading}>Reenviar código</Button>
+        <Button variant="outline" onClick={handleResend} disabled={loading}>Reenviar codigo</Button>
         {isExpired && (
-          <span className="text-sm text-destructive">El código ha expirado. Reenvía para obtener uno nuevo.</span>
+          <span className="text-sm text-destructive">El codigo ha expirado. Reenvia para obtener uno nuevo.</span>
         )}
       </CardFooter>
     </Card>

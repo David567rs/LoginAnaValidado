@@ -1,14 +1,14 @@
 "use client"
 
 import React from 'react'
-import { apiFetch, clearToken, setToken } from '@/lib/api'
+import { apiFetch, clearToken, getToken, setToken } from '@/lib/api'
 
 type User = { _id: string; name: string; email: string }
 
 type AuthContextValue = {
   user: User | null
   token: string | null
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string, remember?: boolean) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
   refreshMe: () => Promise<void>
@@ -20,9 +20,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null)
   const [token, setTok] = React.useState<string | null>(null)
 
-  // Initialize from localStorage and fetch current user
   React.useEffect(() => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('inhalex_token') : null
+    const t = typeof window !== 'undefined' ? getToken() : null
     if (t) {
       setTok(t)
       ;(async () => {
@@ -30,7 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const me = await apiFetch<User>('/auth/me')
           setUser(me)
         } catch {
-          // ignore invalid/expired token
           clearToken()
           setTok(null)
         }
@@ -47,12 +45,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const login = React.useCallback(async (email: string, password: string) => {
+  const login = React.useCallback(async (email: string, password: string, remember = true) => {
     const res = await apiFetch<{ user: User; accessToken: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
-    setToken(res.accessToken)
+    setToken(res.accessToken, remember)
     setTok(res.accessToken)
     setUser(res.user)
   }, [])
