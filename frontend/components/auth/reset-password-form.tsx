@@ -34,7 +34,7 @@ export function ResetPasswordForm({ tokenProp }: { tokenProp?: string }) {
         body: JSON.stringify({ token, newPassword: password }),
       })
       setDone(true)
-      toast.success("Contrasena actualizada. Inicia sesion")
+      toast.success("Contraseña actualizada. Inicia sesion")
     } catch (err: any) {
       let msg = err?.message || "Error desconocido"
       try {
@@ -42,7 +42,7 @@ export function ResetPasswordForm({ tokenProp }: { tokenProp?: string }) {
         msg = parsed?.message || msg
       } catch {}
       const friendly = msg.includes("New password must be different")
-        ? "La nueva contrasena debe ser distinta a la anterior."
+        ? "La nueva contraseña debe ser distinta a la anterior."
         : msg
       toast.error("No se pudo actualizar: " + friendly)
     } finally {
@@ -54,16 +54,16 @@ export function ResetPasswordForm({ tokenProp }: { tokenProp?: string }) {
     <div className="space-y-6">
       <Card className="border-border/50 shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center text-balance">Restablecer contrasena</CardTitle>
+          <CardTitle className="text-3xl font-bold text-center text-balance">Restablecer contraseña</CardTitle>
           <CardDescription className="text-center text-base">
-            Ingresa tu nueva contrasena
+            Ingresa tu nueva contraseña
           </CardDescription>
         </CardHeader>
         <CardContent>
           {done ? (
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <CheckCircle2 className="h-10 w-10 text-green-500" />
-              <p className="text-sm text-muted-foreground">Tu contrasena fue restablecida correctamente.</p>
+              <p className="text-sm text-muted-foreground">Tu contraseña fue restablecida correctamente.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5" aria-busy={isSubmitting} aria-live="polite">
@@ -72,7 +72,7 @@ export function ResetPasswordForm({ tokenProp }: { tokenProp?: string }) {
                 <Input id="token" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Pega el token o usa el del enlace" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">Nueva contrasena</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Nueva contraseña</Label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                   <Input
@@ -93,7 +93,7 @@ export function ResetPasswordForm({ tokenProp }: { tokenProp?: string }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirm" className="text-sm font-medium">Confirmar contrasena</Label>
+                <Label htmlFor="confirm" className="text-sm font-medium">Confirmar contraseña</Label>
                 <div className="relative group">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                   <Input
@@ -114,19 +114,19 @@ export function ResetPasswordForm({ tokenProp }: { tokenProp?: string }) {
                   </button>
                 </div>
                 {mismatch && (
-                  <p id="reset-help" className="text-xs text-red-500 mt-1">Las contrasenas no coinciden</p>
+                  <p id="reset-help" className="text-xs text-red-500 mt-1">Las contraseñas no coinciden</p>
                 )}
               </div>
 
               <Button type="submit" className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-all duration-300" disabled={isSubmitting || mismatch} aria-disabled={isSubmitting || mismatch}>
-                {isSubmitting ? "Guardando..." : "Restablecer contrasena"}
+                {isSubmitting ? "Guardando..." : "Restablecer contraseña"}
               </Button>
             </form>
           )}
         </CardContent>
         <CardFooter className="flex justify-center">
           <Link href="/" className="text-sm text-primary hover:text-primary/80 font-medium">
-            Volver a iniciar sesion
+            Volver a iniciar sesión
           </Link>
         </CardFooter>
       </Card>

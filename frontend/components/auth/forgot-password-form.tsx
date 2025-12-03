@@ -43,7 +43,14 @@ export function ForgotPasswordForm() {
         const parsed = JSON.parse(msg)
         msg = parsed?.message || msg
       } catch {}
-      toast.error(msg || "No se pudo enviar el enlace (correo no enviado o no existe)")
+      const lower = msg.toLowerCase()
+      let friendly = "No se pudo enviar el enlace. Intenta nuevamente."
+      if (lower.includes("no se encuentra registrado") || lower.includes("not found")) {
+        friendly = "El correo no está registrado. Verifícalo e intenta de nuevo."
+      } else if (lower.includes("failed to fetch") || lower.includes("network")) {
+        friendly = "No se pudo enviar el enlace. Revisa tu conexión o intenta de nuevo."
+      }
+      toast.error(friendly)
     } finally {
       setIsSending(false)
     }
