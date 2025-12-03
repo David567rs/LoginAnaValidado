@@ -356,8 +356,7 @@ export function RegisterForm() {
               type="button"
               className="h-11 transition-all duration-200 hover:bg-accent hover:scale-[1.02] bg-transparent w-full max-w-xs"
               onClick={() => {
-                const base = API_BASE.endsWith('/api') ? API_BASE.slice(0, -4) : API_BASE
-                window.location.href = `${base}/auth/google`
+                window.location.href = `${API_BASE}/auth/google`
               }}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
