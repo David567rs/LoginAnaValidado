@@ -4,12 +4,12 @@
 
 export const dynamic = "force-dynamic"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { setToken } from "@/lib/api"
 import { toast } from "sonner"
 
-export default function GoogleCallbackPage() {
+function CallbackInner() {
   const params = useSearchParams()
   const router = useRouter()
 
@@ -29,5 +29,13 @@ export default function GoogleCallbackPage() {
     <div className="min-h-screen flex items-center justify-center">
       <p className="text-sm text-muted-foreground">Procesando inicio de sesión...</p>
     </div>
+  )
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-sm text-muted-foreground">Procesando inicio de sesión...</p></div>}>
+      <CallbackInner />
+    </Suspense>
   )
 }
