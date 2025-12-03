@@ -8,5 +8,8 @@ export const envValidationSchema = Joi.object({
   FRONTEND_URL: Joi.string().uri().default('http://localhost:3000'),
   SENDGRID_API_KEY: Joi.string().optional().allow(''),
   SENDGRID_FROM: Joi.string().optional().allow(''),
+  GOOGLE_CLIENT_ID: Joi.string().optional().allow(''),
+  GOOGLE_CLIENT_SECRET: Joi.string().optional().allow(''),
+  GOOGLE_CALLBACK_URL: Joi.string().uri().optional().allow(''),
 })
 

@@ -8,11 +8,14 @@ import { MongooseModule } from '@nestjs/mongoose'
 import { ResetToken, ResetTokenSchema } from './schemas/reset-token.schema.js'
 import { VerificationCode, VerificationCodeSchema } from './schemas/verification-code.schema.js'
 import { EmailModule } from '../common/email/email.module.js'
+import { PassportModule } from '@nestjs/passport'
+import { GoogleStrategy } from './strategies/google.strategy.js'
 
 @Module({
   imports: [
     UsersModule,
     ConfigModule,
+    PassportModule.register({ session: false }),
     MongooseModule.forFeature([
       { name: ResetToken.name, schema: ResetTokenSchema },
       { name: VerificationCode.name, schema: VerificationCodeSchema },
@@ -26,7 +29,7 @@ import { EmailModule } from '../common/email/email.module.js'
       })
     })
   ],
-  providers: [AuthService],
+  providers: [AuthService, GoogleStrategy],
   controllers: [AuthController]
 })
 export class AuthModule {}

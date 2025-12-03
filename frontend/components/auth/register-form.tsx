@@ -11,7 +11,7 @@ import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, CheckCircle2 } from "
 import { useAuth } from "@/components/auth/auth-provider"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { apiFetch } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false)
@@ -355,6 +355,10 @@ export function RegisterForm() {
               variant="outline"
               type="button"
               className="h-11 transition-all duration-200 hover:bg-accent hover:scale-[1.02] bg-transparent w-full max-w-xs"
+              onClick={() => {
+                const base = API_BASE.endsWith('/api') ? API_BASE.slice(0, -4) : API_BASE
+                window.location.href = `${base}/auth/google`
+              }}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path

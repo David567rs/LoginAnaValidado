@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service.js'
 import { LoginDto } from './dto/login.dto.js'
 import { CreateUserDto } from '../users/dto/create-user.dto.js'
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js'
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator'
 import { UsersService } from '../users/users.service.js'
+import { AuthGuard } from '@nestjs/passport'
+import type { Response } from 'express'
 
 class ForgotDto { @IsEmail() email!: string }
 class ResetDto { @IsNotEmpty() token!: string; @MinLength(8) newPassword!: string }
@@ -60,5 +62,20 @@ export class AuthController {
   async emailAvailable(@Query() query: EmailAvailableQuery) {
     const exists = await this.users.findByEmail(query.email.toLowerCase().trim())
     return { available: !exists }
+  }
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth() {
+    return
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleCallback(@Req() req: any, @Res() res: Response) {
+    const result = await this.auth.loginWithGoogle(req.user)
+    const frontend = process.env.FRONTEND_URL || 'http://localhost:3000'
+    const redirectUrl = `${frontend}/auth/google/callback?token=${encodeURIComponent(result.accessToken)}`
+    return res.redirect(redirectUrl)
   }
 }

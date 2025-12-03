@@ -42,6 +42,13 @@ export class AuthService {
     return this.jwt.signAsync({ sub, email })
   }
 
+  async loginWithGoogle(profile: { email?: string | null; name?: string | null }) {
+    if (!profile.email) throw new UnauthorizedException('No email from Google')
+    const user = await this.users.findOrCreateOAuthUser(profile.name || '', profile.email)
+    const token = await this.signToken((user as any)._id?.toString?.() || String((user as any)._id), user.email)
+    return { user, accessToken: token }
+  }
+
   async requestPasswordReset(email: string) {
     const user = await this.users.findByEmail(email.toLowerCase().trim())
     if (!user) throw new NotFoundException('El correo no se encuentra registrado')
