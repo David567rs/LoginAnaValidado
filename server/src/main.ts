@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   const config = app.get(ConfigService)
-  const frontendUrl = config.get<string>('FRONTEND_URL') || 'http://localhost:3000'
+  const frontendUrl = config.get<string>('https://inhalex.netlify.app') || 'http://localhost:3000'
 
   app.use(helmet())
   app.enableCors({ origin: frontendUrl, credentials: true })
