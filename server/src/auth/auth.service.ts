@@ -32,8 +32,8 @@ export class AuthService {
 
   async login(email: string, password: string) {
     const user = await this.users.validateUser(email, password)
-    if (!user) throw new UnauthorizedException('Invalid credentials')
-    if (!user.isVerified) throw new UnauthorizedException('Email not verified')
+    if (!user) throw new UnauthorizedException('credenciales invalidas')
+    if (!user.isVerified) throw new UnauthorizedException('Email no verificado')
     const token = await this.signToken(user._id.toString(), user.email)
     return { user, accessToken: token }
   }

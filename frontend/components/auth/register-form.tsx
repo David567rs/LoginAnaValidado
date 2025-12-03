@@ -294,7 +294,7 @@ export function RegisterForm() {
                 )}
               </div>
               {!passwordMatch && formData.confirmPassword && (
-                <p id="confirm-help" className="text-xs text-red-500 mt-1">Las contrasenas no coinciden</p>
+                <p id="confirm-help" className="text-xs text-red-500 mt-1">Las contraseñas no coinciden</p>
               )}
             </div>
 
