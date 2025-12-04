@@ -14,7 +14,14 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-2">
           {/* Logo Section */}
           <div className="flex flex-col items-center md:items-start">
-            <Image src="/inhalex-logo.png" alt="INHALEX" width={240} height={80} className={`${styles.logo} w-auto mb-4`} />
+            <Image
+              src="/Inhalex_logoNegro.png"
+              alt="INHALEX"
+              width={320}
+              height={120}
+              className={`${styles.logo} w-auto max-w-xs md:max-w-sm h-auto mb-4`}
+              priority
+            />
             <p className="text-sm text-muted-foreground text-center md:text-left max-w-xs">
               El respiro que alivia. Tu plataforma de bienestar respiratorio.
             </p>
