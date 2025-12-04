@@ -7,6 +7,7 @@ import { AuthController } from './auth.controller.js'
 import { MongooseModule } from '@nestjs/mongoose'
 import { ResetToken, ResetTokenSchema } from './schemas/reset-token.schema.js'
 import { VerificationCode, VerificationCodeSchema } from './schemas/verification-code.schema.js'
+import { LoginAttempt, LoginAttemptSchema } from './schemas/login-attempt.schema.js'
 import { EmailModule } from '../common/email/email.module.js'
 import { PassportModule } from '@nestjs/passport'
 import { GoogleStrategy } from './strategies/google.strategy.js'
@@ -19,6 +20,7 @@ import { GoogleStrategy } from './strategies/google.strategy.js'
     MongooseModule.forFeature([
       { name: ResetToken.name, schema: ResetTokenSchema },
       { name: VerificationCode.name, schema: VerificationCodeSchema },
+      { name: LoginAttempt.name, schema: LoginAttemptSchema },
     ]),
     EmailModule,
     JwtModule.registerAsync({

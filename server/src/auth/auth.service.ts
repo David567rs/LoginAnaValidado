@@ -5,6 +5,7 @@ import { InjectModel } from '@nestjs/mongoose'
 import { Model, Types } from 'mongoose'
 import { ResetToken, ResetTokenDocument } from './schemas/reset-token.schema.js'
 import { VerificationCode, VerificationCodeDocument } from './schemas/verification-code.schema.js'
+import { LoginAttempt, LoginAttemptDocument } from './schemas/login-attempt.schema.js'
 import { randomToken, sha256 } from '../common/utils/crypto.js'
 import { EmailService } from '../common/email/email.service.js'
 import bcrypt from 'bcryptjs'
@@ -17,6 +18,7 @@ export class AuthService {
     @InjectModel(ResetToken.name) private readonly resetModel: Model<ResetTokenDocument>,
     private readonly email: EmailService,
     @InjectModel(VerificationCode.name) private readonly verifModel: Model<VerificationCodeDocument>,
+    @InjectModel(LoginAttempt.name) private readonly loginAttemptModel: Model<LoginAttemptDocument>,
   ) {}
 
   async register(data: { name: string; email: string; password: string }) {
@@ -31,8 +33,16 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    const user = await this.users.validateUser(email, password)
-    if (!user) throw new UnauthorizedException('credenciales invalidas')
+    const normalizedEmail = email.toLowerCase().trim()
+    await this.ensureNotLocked(normalizedEmail)
+
+    const user = await this.users.validateUser(normalizedEmail, password)
+    if (!user) {
+      await this.registerFailedAttempt(normalizedEmail)
+      throw new UnauthorizedException('credenciales invalidas')
+    }
+
+    await this.resetAttempts(normalizedEmail)
     if (!user.isVerified) throw new UnauthorizedException('Email no verificado')
     const token = await this.signToken(user._id.toString(), user.email)
     return { user, accessToken: token }
@@ -156,5 +166,41 @@ export class AuthService {
     if (user.isVerified) return { ok: true }
     await this.issueAndSendVerification(user._id.toString(), user.email)
     return { ok: true }
+  }
+
+  private async ensureNotLocked(email: string) {
+    const record = await this.loginAttemptModel.findOne({ email })
+    if (record?.lockUntil && record.lockUntil.getTime() > Date.now()) {
+      const remaining = Math.ceil((record.lockUntil.getTime() - Date.now()) / 1000 / 60)
+      throw new UnauthorizedException(`Cuenta bloqueada. Intenta nuevamente en ${remaining} min`)
+    }
+  }
+
+  private async registerFailedAttempt(email: string) {
+    const now = Date.now()
+    const record = await this.loginAttemptModel.findOne({ email })
+    if (!record) {
+      await this.loginAttemptModel.create({ email, attempts: 1, tier: 0, lockUntil: null })
+      return
+    }
+
+    // If lock expired, reset attempts
+    if (record.lockUntil && record.lockUntil.getTime() < now) {
+      record.attempts = 0
+      record.lockUntil = null
+    }
+
+    record.attempts += 1
+    if (record.attempts >= 3) {
+      const lockMinutes = record.tier === 0 ? 1 : 15
+      record.lockUntil = new Date(now + lockMinutes * 60 * 1000)
+      record.attempts = 0
+      record.tier = Math.min(record.tier + 1, 1) // stay at tier 1 after second lock
+    }
+    await record.save()
+  }
+
+  private async resetAttempts(email: string) {
+    await this.loginAttemptModel.deleteOne({ email })
   }
 }
