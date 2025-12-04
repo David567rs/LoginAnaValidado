@@ -26,7 +26,7 @@ export default function LoginPage() {
                 width={256}
                 height={256}
                 priority
-                className="w-24 h-24 md:w-166 md:h-76 mx-auto drop-shadow-2xl"
+                className="w-24 h-24 md:w-160 md:h-80 mx-auto drop-shadow-2xl"
               />
             </div>
             <h1 className="text-5xl md:text-6xl font-bold text-primary-foreground mb-5 text-balance tracking-tight">
